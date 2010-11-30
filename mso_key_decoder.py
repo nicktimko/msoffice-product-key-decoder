@@ -69,18 +69,15 @@ def b24decode(input, chrmap=None):
     if chrmap is None:
         chrmap = generic_b24chrs
     
-    # clean invalid characters from input
+    # clean invalid characters from input (e.g. '-' (dashes) in product key)
+    # and map to \x00 through \x23.
     rmchrs = []
     for i in xrange(256):
         if not chr(i) in chrmap:
             rmchrs.append(chr(i))
-            
     tt = string.maketrans(chrmap, ''.join([chr(i) for i in xrange(24)]))
-    
     input = input.translate(tt, ''.join(rmchrs))
-    
-    #print repr(input)
-    
+        
     encnum = 0
     for cc in input:
         encnum *= 24
@@ -154,12 +151,10 @@ def main(argv=None):
         
     mso_root = wr.OpenKey(wr.HKEY_LOCAL_MACHINE, reg_root)
     
-    rf = "{0:<40} {1:<}"
     product_head = "Product Name"
     dpid_head = "Digital Product ID (key encoded in base24)"
     
-    print rf.format(product_head, dpid_head)
-    print rf.format('-' * len(product_head),'-' * len(dpid_head))
+    prod_keys = []
     
     for subkey in SubKeys(mso_root):
         # subkey always observed to be a version number (11.0, 12.0, 14.0...)
@@ -189,7 +184,17 @@ def main(argv=None):
                     #      (name[1], 
                     #       msoKeyDecode(dpid[1],subkey))
                            
-                    print rf.format(name[1], msoKeyDecode(dpid[1],subkey))
+                    #print rf.format(name[1], msoKeyDecode(dpid[1],subkey))
+                    prod_keys.append((name[1], msoKeyDecode(dpid[1],subkey)))
+    
+    rf = "{0:<%i} {1:<}" % (max([len(i[0]) for i in prod_keys]) + 3)
+    
+    print rf.format(product_head, dpid_head)
+    print rf.format('-' * len(product_head),'-' * len(dpid_head))
+    
+    for prod_key in prod_keys:
+        print rf.format(*prod_key)
+    
         
 if __name__ == "__main__":
     sys.exit(main())
